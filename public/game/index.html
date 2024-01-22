@@ -11,37 +11,204 @@
 
 <body>
     <div style="display:none;">
-        <img id="source" src="https://www.shutterstock.com/image-illustration/tennis-racket-icon-illustration-on-260nw-466955171.jpg" alt="">
+        <img id="source"
+            src="https://www.shutterstock.com/image-illustration/tennis-racket-icon-illustration-on-260nw-466955171.jpg"
+            alt="">
     </div>
     <canvas id="canvas" width="100vh" height="100%"></canvas>
     <script type="application/javascript">
-        (function () {
-            const canvas = document.getElementById('canvas');
-            const context = canvas.getContext('2d');
 
-            window.addEventListener('resize', resizeCanvas, false);
+        class Paddle {
+            constructor(side) {
+                this.side = side;
+                this.y = 0
+            }
+        }
 
-            function resizeCanvas() {
-                canvas.width = window.innerWidth - 20;
-                canvas.height = window.innerHeight - 20;
+        class Ball {
+            constructor() {
+                const shouldGoLeft = Math.random() > 0.5;
+                this.angle = shouldGoLeft ? -45 : 90;
+                console.log("startangle", this.angle);
 
-                drawStuff();
+                this.y = this.x = 0.5;
+            }
+        }
+
+        const paddles = [
+            new Paddle(0),
+            new Paddle(1)
+        ]
+
+        const theBall = new Ball();
+
+        const myPaddle = paddles[0];
+        const theirPaddle = paddles[1];
+
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+
+        window.addEventListener('resize', resizeCanvas);
+
+        window.addEventListener('keydown', onKeyDown);
+        window.addEventListener('keyup', onKeyUp);
+
+        let keydown = null;
+
+        function onKeyDown(event) {
+
+            /*if (event.key == "s" || event.key == "w") {
+                if (event.key == "s") myPaddle.y += 0.01;
+                else myPaddle.y -= 0.01;
+
+                myPaddle.y = Math.min(1 - 0.24, myPaddle.y)
+                myPaddle.y = Math.max(0, myPaddle.y)
+
+                console.log("Moved My Paddle")
             }
 
-            resizeCanvas();
+            if (event.key == "ArrowDown" || event.key == "ArrowUp") {
+                if (event.key == "ArrowDown") theirPaddle.y += 0.01;
+                else theirPaddle.y -= 0.01;
 
-            function drawStuff() {
-                if (canvas.getContext) {
-                    const ctx = canvas.getContext("2d");
+                theirPaddle.y = Math.min(1 - 0.24, theirPaddle.y)
+                theirPaddle.y = Math.max(0, theirPaddle.y)
 
-                    ctx.fillStyle = "white";//ctx.fillRect(10, 10, 25, canvas.height * 0.35);
-                    const image = document.getElementById("source");
-                    image.addEventListener("load", (e) => {
-                        ctx.drawImage(image, 50, 0, 144, 260, 21, 50, 107, 174);
-                    });
+
+            }*/
+            keydown = event.key;
+
+        }
+
+        function onKeyUp(event) {
+            keydown = null;
+        }
+
+        let index = 0;
+        let speed = 0.005;
+
+        function moveBall() {
+            
+            let xVelocity = 0;
+            let yVelocity = 0;
+            if (theBall.angle == 0) {
+                theBall.angle = 2;
+            }
+            else if (Math.abs(theBall.angle) == 90) {
+                theBall.angle = 92;
+            }
+            
+            xVelocity = Math.cos(theBall.angle) * speed;
+            yVelocity = Math.sin(theBall.angle) * speed;
+        
+            if (Math.abs(theBall.angle) > 90) {
+                //console.log("angleBIG", theBall.angle);
+            }
+
+            theBall.x += xVelocity;
+            theBall.y += yVelocity;
+
+            const movingUp = yVelocity < 0;
+            if (theBall.y < 0 && movingUp) {
+                //console.log("bounceWAllTop", xVelocity, yVelocity, theBall.angle);
+                theBall.angle += 90;
+                //bounceWAlly 0.001753986710452107 -0.00468225700058822 271
+                //bounceWAlly 0.0034000069686514413 0.0036660540930435878 361
+            }
+            if (theBall.y > 1 && !movingUp) {
+                theBall.angle += 90;
+                //console.log("bounceWAllBottom", xVelocity, yVelocity, theBall.angle);
+            }
+
+            for (const paddle of paddles) {
+                //if (paddle == theirPaddle) continue;
+
+                const posY = paddle.y;
+                const height = 0.24;
+                
+                const posX = paddle == myPaddle ? 0 : 1 -0.06;
+                const width = 0.09;
+
+                //if (index++ % 5 == 0) console.log(theBall.x, posX, xVelocity)
+                
+                const withinY = theBall.y > posY && theBall.y < posY + height;
+                const withinX = paddle == myPaddle ? theBall.x < posX + width : theBall.x > posX;
+                const isIncoming = paddle == myPaddle? xVelocity < 0 : xVelocity > 0;
+                // See if ballY is between paddle posY and its height
+                if (withinY && withinX && isIncoming) {
+                    //console.log("bounce", theBall.angle, xVelocity, yVelocity, posX + width, theBall.x);
+                    theBall.angle += paddle == (myPaddle ? 90 : 180) * yVelocity > 0? -1 : 1;
+                    //theBall.angle *= -1;
+                    
+                    speed += 0.0002;
                 }
             }
-        })();
+        }
+
+        function movePaddle() {
+            if (keydown != null) {
+                if (keydown == "s" || keydown == "w") {
+                    if (keydown == "s") myPaddle.y += 0.005;
+                    else myPaddle.y -= 0.005;
+
+                    myPaddle.y = Math.min(1 - 0.24, myPaddle.y)
+                    myPaddle.y = Math.max(0, myPaddle.y)
+
+                    //console.log("Moved My Paddle")
+                }
+
+                if (keydown == "ArrowDown" || keydown == "ArrowUp") {
+                    if (keydown == "ArrowDown") theirPaddle.y += 0.005;
+                    else theirPaddle.y -= 0.005;
+
+                    theirPaddle.y = Math.min(1 - 0.24, theirPaddle.y)
+                    theirPaddle.y = Math.max(0, theirPaddle.y)
+
+                }
+            }
+        }
+
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth - 20;
+            canvas.height = window.innerHeight - 20;
+
+            drawStuff();
+        }
+
+        resizeCanvas();
+
+        function drawStuff() {
+            if (canvas.getContext) {
+                const ctx = canvas.getContext("2d");
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = "white";//ctx.fillRect(10, 10, 25, canvas.height * 0.35);
+                const image = document.getElementById("source");
+
+                // drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight)
+                for (const paddle of paddles) {
+                    const posY = canvas.height * paddle.y;
+                    if (paddle == myPaddle) {
+                        ctx.drawImage(image, 50, 0, 144, canvas.height * 0.26, 21, posY, canvas.height * 0.14, canvas.height * 0.24);
+                    } else {
+                        ctx.drawImage(image, 50, 0, 144, canvas.height * 0.26, canvas.width - (canvas.height * 0.14), posY, canvas.height * 0.14, canvas.height * 0.24);
+                    }
+                }
+
+                const circle = new Path2D();
+                circle.arc(canvas.width * theBall.x, canvas.height * theBall.y, 25, 0, 2 * Math.PI);
+
+                ctx.fillStyle = "green";
+                ctx.fill(circle);
+
+            }
+
+            moveBall();
+            movePaddle();
+
+            window.requestAnimationFrame(drawStuff);
+        }
+
     </script>
 </body>
 
