@@ -1,0 +1,29 @@
+.button {
+    position: absolute;
+    right: 50%;
+    top: 50%;
+
+    transform: translate(50%, -50%);
+
+    color: aquamarine;
+
+    display: flex;
+    gap: 40px;
+    font-family: 'Courier New', Courier, monospace;
+
+}
+
+.button > a {
+    text-decoration: none;
+    color: aquamarine;
+
+
+}
+
+.button > a:hover {
+    font-weight: bold;
+}
+
+body {
+    background-color: rgb(20,20,20);
+}
