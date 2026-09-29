@@ -28,8 +28,7 @@
         class Ball {
             constructor() {
                 const shouldGoLeft = Math.random() > 0.5;
-                this.angle = shouldGoLeft ? -45 : 90;
-                console.log("startangle", this.angle);
+                this.angle = shouldGoLeft ? 135 : 45;
 
                 this.y = this.x = 0.5;
             }
@@ -84,64 +83,79 @@
             keydown = null;
         }
 
-        let index = 0;
         let speed = 0.005;
+        const BASE_SPEED = 0.005;
+
+        function resetBall() {
+            const shouldGoLeft = Math.random() > 0.5;
+            theBall.angle = shouldGoLeft ? 135 : 45;
+            theBall.y = theBall.x = 0.5;
+            speed = BASE_SPEED;
+        }
 
         function moveBall() {
-            
-            let xVelocity = 0;
-            let yVelocity = 0;
-            if (theBall.angle == 0) {
-                theBall.angle = 2;
+
+            // Normalize the angle to [0, 360) and nudge it off perfectly
+            // horizontal/vertical trajectories (those can never be scored).
+            theBall.angle = ((theBall.angle % 360) + 360) % 360;
+            if (theBall.angle % 180 === 0 || theBall.angle % 180 === 90) {
+                theBall.angle += 2;
             }
-            else if (Math.abs(theBall.angle) == 90) {
-                theBall.angle = 92;
-            }
-            
-            xVelocity = Math.cos(theBall.angle) * speed;
-            yVelocity = Math.sin(theBall.angle) * speed;
-        
-            if (Math.abs(theBall.angle) > 90) {
-                //console.log("angleBIG", theBall.angle);
-            }
+
+            // Math.cos/Math.sin expect radians
+            const radians = theBall.angle * Math.PI / 180;
+            const xVelocity = Math.cos(radians) * speed;
+            const yVelocity = Math.sin(radians) * speed;
+
+            // remember where the ball came from (for swept collision below)
+            const prevX = theBall.x;
+            const prevY = theBall.y;
 
             theBall.x += xVelocity;
             theBall.y += yVelocity;
 
+            // Bounce off the top/bottom walls: reflect the Y direction
             const movingUp = yVelocity < 0;
             if (theBall.y < 0 && movingUp) {
-                //console.log("bounceWAllTop", xVelocity, yVelocity, theBall.angle);
-                theBall.angle += 90;
-                //bounceWAlly 0.001753986710452107 -0.00468225700058822 271
-                //bounceWAlly 0.0034000069686514413 0.0036660540930435878 361
+                theBall.y = 0;
+                theBall.angle = -theBall.angle;
             }
             if (theBall.y > 1 && !movingUp) {
-                theBall.angle += 90;
-                //console.log("bounceWAllBottom", xVelocity, yVelocity, theBall.angle);
+                theBall.y = 1;
+                theBall.angle = -theBall.angle;
             }
 
             for (const paddle of paddles) {
-                //if (paddle == theirPaddle) continue;
-
                 const posY = paddle.y;
                 const height = 0.24;
-                
-                const posX = paddle == myPaddle ? 0 : 1 -0.06;
-                const width = 0.09;
 
-                //if (index++ % 5 == 0) console.log(theBall.x, posX, xVelocity)
-                
-                const withinY = theBall.y > posY && theBall.y < posY + height;
-                const withinX = paddle == myPaddle ? theBall.x < posX + width : theBall.x > posX;
-                const isIncoming = paddle == myPaddle? xVelocity < 0 : xVelocity > 0;
-                // See if ballY is between paddle posY and its height
-                if (withinY && withinX && isIncoming) {
-                    //console.log("bounce", theBall.angle, xVelocity, yVelocity, posX + width, theBall.x);
-                    theBall.angle += paddle == (myPaddle ? 90 : 180) * yVelocity > 0? -1 : 1;
-                    //theBall.angle *= -1;
-                    
+                const posX = paddle == myPaddle ? 0 : 1 - 0.06;
+                const width = 0.09;
+                // the plane the ball bounces on (inner face of the paddle)
+                const face = paddle == myPaddle ? posX + width : posX;
+
+                // swept overlap over the ball's whole step, so fast balls
+                // cannot jump over the paddle between two frames
+                const yLo = Math.min(prevY, theBall.y);
+                const yHi = Math.max(prevY, theBall.y);
+                const withinY = yHi >= posY && yLo <= posY + height;
+                // the ball crossed the paddle's face this frame, moving toward it
+                const crossing = paddle == myPaddle
+                    ? prevX >= face && theBall.x <= face
+                    : prevX <= face && theBall.x >= face;
+
+                if (withinY && crossing) {
+                    // Bounce off the paddle: reflect the X direction
+                    theBall.angle = 180 - theBall.angle;
+                    theBall.x = face;
+
                     speed += 0.0002;
                 }
+            }
+
+            // The ball got past a paddle: serve a new one from the middle
+            if (theBall.x < -0.05 || theBall.x > 1.05) {
+                resetBall();
             }
         }
 
